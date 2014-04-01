@@ -1,0 +1,280 @@
+Nagios Installation & Configuration
+Steps for installing nagios on Linux:-
+Download the nagios and plugins
+Take care of the prerequisites
+Create user and group for nagios
+Install nagios
+Configure the web interface
+Compile and install nagios plugins
+Start Nagios
+Login to web interface
+ 
+1. Download the nagios and plugins
+Download following files from Nagios.org and move to /mnt/downloads
+nagios-3.4.4.tar.gz
+nagios-plugins-1.4.16.tar.gz
+ 
+2. Take care of the prerequisitesEdit
+Make sure you've installed the following packages on your Fedora installation before continuing.
+yum install httpd php
+ 
+yum install gcc glibc glibc-common
+ 
+yum install gd gd-devel
+3. Create user and group for nagiosEdit
+[root@localhost]# useradd nagios
+[root@localhost]# passwd nagios
+[root@localhost]# groupadd nagcmd
+[root@localhost]# usermod -G nagcmd nagios
+[root@localhost]# usermod -G nagcmd apache
+4. Install nagiosEdit
+[root@localhost]# tar xvf nagios-3.0.1.tar.gz
+[root@localhost]# cd nagios-3.0.1
+[root@localhost]#. /configure --with-command-group=nagcmd
+[root@localhost]# make all
+[root@localhost]# make install
+[root@localhost]# make install-config
+[root@localhost]# make install-commandmode
+[root@localhost]# make install-init
+5. Configure the web interface.Edit
+[root@localhost]# make install-webconf
+[root@localhost# htpasswd -c /usr/local/nagios/etc/htpasswd.users nagiosadmin
+New password:
+Re-type new password:
+Adding password for user nagiosadmin
+6. Compile and install nagios pluginsEdit
+[root@localhost]# tar xvf nagios-plugins-1.4.11.tar.gz
+[root@localhost]# cd nagios-plugins-1.4.11
+[root@localhost]# ./configure --with-nagios-user=nagios --with-nagios-group=nagios
+[root@localhost]# make
+[root@localhost]# make install
+7. Start NagiosEdit
+Add the nagios to the startup routine:
+[root@localhost]# chkconfig --add nagios
+[root@localhost]# chkconfig nagios on
+Verify to make sure there are no errors in the nagios configuration file:
+ 
+[root@localhost]# /usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg
+ 
+      Total Warnings: 0
+      Total Errors:   0
+      Things look okay - No serious problems were detected during the pre-flight check
+Start the nagios
+[root@localhost]# service nagios start
+Starting nagios: done.
+8. Login to web interfaceEdit
+Nagios Web URL: http://localhost/nagios/
+Use the userid, password that was created from step#5 above.
+ 
+How to add Linux server in Nagios for Monitoring
+ 
+6 steps to install Nagios plugin and NRPE on remote host.
+Download Nagios Plugins and NRPE Add-on
+Create nagios account
+Install Nagios Plugins
+Install NRPE
+Setup NRPE to run as daemon
+Modify the /usr/local/nagios/etc/nrpe.cfg
+ 
+1. Download Nagios Plugins and NRPE Add-onEdit
+Download following files from Nagios.org and move to /mnt/downloads:
+nagios-plugins-1.4.11.tar.gz
+nrpe-2.12.tar.gz
+2. Create nagios accountEdit
+[remotehost]# useradd nagios
+[remotehost]# passwd nagios
+3. Install nagios-pluginEdit
+[remotehost]# cd /home/downloads
+[remotehost]# tar xvfz nagios-plugins-1.4.11.tar.gz
+[remotehost]# cd nagios-plugins-1.4.11
+[remotehost]# export LDFLAGS=-ldl
+ 
+[remotehost]# ./configure --with-nagios-user=nagios --with-nagios-group=nagios --enable-redhat-pthread-workaround
+[remotehost]# make
+[remotehost]# make install
+ 
+[remotehost]# chown nagios.nagios /usr/local/nagios
+[remotehost]# chown -R nagios.nagios /usr/local/nagios/libexec/
+4. Install NRPEEdit
+[remotehost]# cd /home/downloads
+[remotehost]# tar xvfz nrpe-2.12.tar.gz
+[remotehost]# cd nrpe-2.12
+ 
+[remotehost]# ./configure
+[remotehost]# make all
+[remotehost]# make install-plugin
+[remotehost]# make install-daemon
+[remotehost]# make install-daemon-config
+[remotehost]# make install-xinetd
+5. Setup NRPE to run as daemon (i.e as part of xinetd):Edit
+Modify the /etc/xinetd.d/nrpe to add the ip-address of the Nagios monitoring server to the only_from directive. Note that there is a space after the 127.0.0.1 and the nagios monitoring server ip-address
+only_from       = 127.0.0.1 192.168.1.2
+Modify the /etc/services and add the following at the end of the file.
+      nrpe 5666/tcp # NRPE
+Start the service
+      [remotehost]#service xinetd restart
+Verify whether NRPE is listening
+    [remotehost]# netstat -at | grep nrpe
+     tcp 0      0 *:nrpe *:*                         LISTEN
+Verify to make sure the NRPE is functioning properly
+[remotehost]# /usr/local/nagios/libexec/check_nrpe -H localhost
+NRPE v2.12
+6. Modify the /usr/local/nagios/etc/nrpe.cfgEdit
+The nrpe.cfg file located on the remote host contains the commands that are needed to check the services on the remote host. By default the nrpe.cfg comes with few standard check commands as samples. check_users and check_load are shown below as an example.
+command[check_users]=/usr/local/nagios/libexec/check_users -w 5 -c 10
+command[check_load]=/usr/local/nagios/libexec/check_load -w 15,10,5 -c 30,25,20
+command[check_disk]=/usr/local/nagios/libexec/check_disk -w 20% -c 10% -p /dev/sda1
+command[check_procs]=/usr/local/nagios/libexec/check_procs -w 150 -c 200
+command[check_http]=/usr/local/nagios/libexec/check_http -I 172.23.2.179 -p 80
+command[check_memory]=/usr/local/nagios/libexec/check_memory -w 70 -c 80
+ 
+III. 4 Configuration steps on the Nagios monitoring server to monitor remote host:Edit
+. 1. Download NRPE Add-onEdit
+Download nrpe-2.12.tar.gz from Nagios.org and move to /mnt/downloads:
+2. Install check_nrpe on the nagios monitoring serverEdit
+[nagios-server]# tar xvfz nrpe-2.12.tar.gz
+[nagios-server]# cd nrpe-2.1.2
+[nagios-server]# ./configure
+[nagios-server]# make all
+[nagios-server]# make install-plugin
+3. You may modify /usr/local/nagios/etc/objects/commands.cfg to add check_nrpe that was not by default in that file.
+
+# ‘check_nrpe’ command definitions
+define command{
+command_name check_nrpe
+command_line $USER1$/check_nrpe -H $HOSTADDRESS$ -t 30 -c $ARG1$
+}
+3. Create host and service definition for remotehostEdit
+Create a new configuration file /usr/local/nagios/etc/objects/remotehost.cfg to define the host and service definition for this particular remotehost. It is good to take the localhost.cfg and copy it as remotehost.cfg and start modifying it according to your needs.
+host definition sample:
+define host{
+use linux-server
+host_name remotehost
+alias Remote Host
+address 192.168.1.3
+contact_groups admins
+}
+Service definition sample:
+define service{
+use generic-service
+service_description Root Partition
+contact_groups admins
+check_command check_nrpe!check_disk
+}
+ 
+Note: In all the above examples, replace remotehost with the corresponding hostname of your remotehost.
+4. Restart the nagios serviceEdit
+Restart the nagios as shown below and login to the nagios web (http://nagios-server/nagios/) to verify the status of the remotehost linux sever that was added to nagios for monitoring.
+[nagios-server]# service nagios reload
+ 
+-----------------------Percona Monitoring Plugins--------------------
+ 
+The Percona Monitoring Plugins  are high-quality components to add enterprise-grade MySQL monitoring and graphing capabilities to your existing in-house, on-premises monitoring solutions. The components are designed to integrate seamlessly with widely deployed solutions such as Nagios and Cacti, and are delivered in the form of templates, plugins, and scrits.
+For complete document please Refer:
+http://www.percona.com/doc/percona-monitoring-plugins/
+Steps to add and configure percona-monitoring-plugins with Nagios.
+ 
+Step1 :  on Nagios_server
+Download the latest percona-monitoring-plugins .
+Nagios_server # cd  /mnt
+Nagios_server # wget http://www.percona.com/redir/downloads/percona-monitoring-plugins/1.0.1/percona-monitoring-plugins-1.0.1.tar.gz
+Nagios_server # tar xzf percona-monitoring-plugins-1.0.1.tar.gz
+Nagios_server # cd  /mnt/percona-monitoring-plugins-1.0.1/nagios/bin
+Nagios_server # cp pmp* /usr/local/nagios/libexec/
+Nagios_server # chown -R nagios:nagios pmp*
+Nagios_server #ll
+-rwxr-xr-x 1 nagios nagios 8.2K Nov  8 07:07 pmp-check-unix-memory
+-rwxr-xr-x 1 nagios nagios 7.9K Nov  8 07:07 pmp-check-pt-table-checksum
+-rwxr-xr-x 1 nagios nagios  16K Nov  8 07:07 pmp-check-mysql-status.~1~
+-rwxr-xr-x 1 nagios nagios  16K Nov  8 07:07 pmp-check-mysql-status
+-rwxr-xr-x 1 nagios nagios 7.8K Nov  8 07:07 pmp-check-mysql-replication-running
+-rwxr-xr-x 1 nagios nagios 7.5K Nov  8 07:07 pmp-check-mysql-replication-delay
+-rwxr-xr-x 1 nagios nagios 8.3K Nov  8 07:07 pmp-check-mysql-processlist
+-rwxr-xr-x 1 nagios nagios  11K Nov  8 07:07 pmp-check-mysql-pidfile
+-rwxr-xr-x 1 nagios nagios  12K Nov  8 07:07 pmp-check-mysql-innodb
+-rwxr-xr-x 1 nagios nagios  11K Nov  8 07:07 pmp-check-mysql-file-privs
+-rwxr-xr-x 1 nagios nagios  11K Nov  8 07:07 pmp-check-mysql-deleted-files
+-rwxr-xr-x 1 nagios nagios 6.5K Nov  8 07:07 pmp-check-mysql-deadlocks
+-rwxr-xr-x 1 nagios nagios 6.4K Nov  8 07:07 pmp-check-lvm-snapshots
+Step2 :  on Nagios_server
+Nagios_server # cd /usr/local/nagios/etc/objects/
+Nagios_server r # vim commands.cfg
+Add the following lines the file commands.cfg
+define command{
+command_name pmp-check-mysql-replication-delay
+command_line $USER1$/pmp-check-mysql-replication-delay -H $ARG1$ -l $ARG2$ -p $ARG3$ -P $ARG4$
+}
+define command{
+command_name pmp-check-mysql-replication-running
+command_line $USER1$/pmp-check-mysql-replication-running -H $ARG1$ -l $ARG2$ -p $ARG3$ -P $ARG4$
+}
+define command{
+command_name pmp-check-mysql-deadlocks
+command_line $USER1$/pmp-check-mysql-deadlocks -H $ARG1$ -l $ARG2$ -p $ARG3$ -P $ARG4$
+}
+define command{
+command_name pmp-check-mysql-processlist
+command_line $USER1$/pmp-check-mysql-processlist -H $ARG1$ -l $ARG2$ -p $ARG3$ -P $ARG4$
+}
+define command{
+command_name pmp-check-mysql-status
+command_line $USER1$/pmp-check-mysql-status -H $ARG1$ -l $ARG2$ -p $ARG3$ -P $ARG4$ -x $ARG5$ -w $ARG6$ -c $ARG7$
+}
+Step3 :  on Nagios_server
+Note:  Replace sample_server.cfg file with  mysql server hostname that we want to monitor through Nagios  . Example-  OX-Reporting-Slave-Percona22.cfg
+Nagios_server # cd /usr/local/nagios/etc/objects/
+Open the  sample_server.cfg file
+Nagios_server #vim sample_server.cfg
+Add the following lines in the file.
+define service {
+use generic-service
+host_name  sample_server
+service_description pmp-check-mysql-replication-delay
+check_command pmp-check-mysql-replication-delay!IP-address-sample_server!nagios!nagios!3306!
+}
+define service{
+use generic-service
+host_name sample_server
+service_description pmp-check-mysql-replication-running
+check_command pmp-check-mysql-replication-running!IP-address-sample_server!nagios!nagios!3306!
+}
+ 
+#define service{
+#use generic-service
+#host_name sample_server
+#service_description pmp-check-mysql-deadlocks
+#check_command pmp-check-mysql-deadlocks!IP-address-sample_server!nagios!nagios!3306!
+#}
+ 
+define service{
+use generic-service
+host_name sample_server
+service_description pmp-check-mysql-processlist
+check_command pmp-check-mysql-processlist!IP-address-sample_server!nagios!nagios!3306!
+}
+ 
+define service{
+use generic-service
+host_name sample_server
+service_description pmp-check-mysql-status
+check_command pmp-check-mysql-status!IP-address-sample_server!nagios!nagios!3306!Threads_running!20!30!
+}
+Step4 :  on Sample_server – This step is not necessary.
+ Copy or download  percona-monitoring-plugins on Sample_server.
+sample_server # cd  /mnt
+sample_server # wget http://www.percona.com/redir/downloads/percona-monitoring-plugins/percona-monitoring-plugins-1.0.1.tar.gz
+sample_server # tar xzf percona-monitoring-plugins-1.0.1.tar.gz
+sample_server # cd  percona-monitoring-plugins-1.0.1
+sample_server # cp pmp* /usr/local/nagios/libexec/
+sample_server # chown -R nagios:nagios pmp*
+Step 5 on sample server:
+Login to mysql and execute this command:
+grant usage,replication client  on *.* to nagios@'%' identified by 'nagios';
+then check its permissions:
+show grants for nagios@'%';
+ 
+Step 6 :  on Nagios_server
+Check the configuration file and Reload the nagios service.
+Nagios_server # /usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg
+Nagios_server # service nagios reload
+Finally  go to nagios monitoring and find the services which we add is showing the result properly or not.
